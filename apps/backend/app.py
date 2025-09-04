@@ -67,36 +67,69 @@ def health_check():
 
 @app.route('/products', methods=['GET'])
 def get_products():
-    """Get all products with basic fields"""
+    """Get products with pagination and filtering"""
     try:
-        # Only return products that should be shown in app
-        # query = {"show_in_app": {"$ne": False}}
+        # Base query
         query = {}
         
-        # Get search parameter if provided
+        # Filter by show_in_app if checkbox is provided
+        show_in_app_filter = request.args.get('show_in_app')
+        if show_in_app_filter == 'true':
+            query["show_in_app"] = True
+        # elif show_in_app_filter == 'false':
+        #     query["show_in_app"] = False
+        # else:
+        #     # Default: only show products that should be shown in app
+        #     query["show_in_app"] = {"$ne": False}
+        
+        # Get search parameters
         search = request.args.get('search', '').strip()
         if search:
-            query["product_name"] = {"$regex": search, "$options": "i"}
+            # Search in product_name, product_code, or product_id
+            search_conditions = [
+                {"product_name": {"$regex": search, "$options": "i"}}
+            ]
+            
+            # Add product_code search if field exists
+            search_conditions.append({"product_code": {"$regex": search, "$options": "i"}})
+            
+            # If search is numeric, also search by product_id
+            if search.isdigit():
+                search_conditions.append({"product_id": int(search)})
+            
+            query["$or"] = search_conditions
+        
+        # Pagination - limit to 100 products max
+        limit = min(int(request.args.get('limit', 100)), 100)
+        skip = int(request.args.get('skip', 0))
         
         products = list(collection.find(
             query,
             {
                 "product_id": 1,
+                "product_code": 1,
                 "product_name": 1,
                 "category_name": 1,
                 "brand_name": 1,
-                "price_cash": 1
+                "price_cash": 1,
+                "link": 1,
+                "show_in_app": 1
             }
-        ).sort("product_id", 1))
+        ).sort("product_id", 1).skip(skip).limit(limit))
         
         # Serialize products
         serialized_products = [serialize_product(product) for product in products]
         
-        print(query)
+        # Get total count for pagination info
+        total_count = collection.count_documents(query)
+        
         return jsonify({
             "success": True,
             "data": serialized_products,
-            "count": len(serialized_products)
+            "count": len(serialized_products),
+            "total": total_count,
+            "limit": limit,
+            "skip": skip
         })
     
     except Exception as e:
@@ -154,7 +187,7 @@ def create_product():
             }), 400
         
         # Validate required fields
-        required_fields = ['product_name', 'category_name', 'brand_name']
+        required_fields = ['product_code', 'product_name', 'category_name', 'brand_name', 'brand_logo', 'description']
         for field in required_fields:
             if field not in data or not data[field]:
                 return jsonify({
@@ -162,23 +195,28 @@ def create_product():
                     "error": f"Missing required field: {field}"
                 }), 400
         
-        print(required_fields)# Create new product document
+        # Create new product document
         new_product = {
             "product_id": get_next_product_id(),
+            "product_code": data['product_code'],
+            "main_boost": data.get('main_boost', 1),
+            "low_value_flag": data.get('low_value_flag', 0),
+            "popularity": data.get('popularity', 0),
             "product_name": data['product_name'],
             "category_name": data['category_name'],
             "brand_name": data['brand_name'],
             "brand_logo": data['brand_logo'],
-            "price_cash": data.get('price_cash',0.0),
-            "description": data.get('description', ''),
+            "price_cash": data.get('price_cash', 0),
+            "description": data['description'],
             "link": data.get('link', []),
             "show_in_app": data.get('show_in_app', True),
-            "spare_part": data['is_spare_part'],
+            "new_product": data.get('new_product', False),
+            "discount": data.get('discount'),
+            "is_spare_part": data.get('is_spare_part', False),
             "created_at": datetime.datetime.utcnow(),
             "updated_at": datetime.datetime.utcnow()
         }
         
-        print(new_product)
         # Insert product
         result = collection.insert_one(new_product)
         
@@ -194,7 +232,7 @@ def create_product():
     except ValueError as e:
         return jsonify({
             "success": False,
-            "error": "Invalid price format"
+            "error": "Invalid data format"
         }), 400
     except Exception as e:
         return jsonify({
@@ -236,14 +274,14 @@ def update_product(product_id):
         
         # Prepare update data
         update_data = {}
-        allowed_fields = ['product_name', 'category_name', 'brand_name', 'description', 'show_in_app']
+        allowed_fields = [
+            'product_name', 'category_name', 'brand_name', 'brand_logo',
+            'description', 'link', 'show_in_app', 'new_product', 'discount', 'is_spare_part'
+        ]
         
         for field in allowed_fields:
             if field in data:
-                if field == 'price_cash':
-                    update_data[field] = float(data[field])
-                else:
-                    update_data[field] = data[field]
+                update_data[field] = data[field]
         
         if update_data:
             update_data['updated_at'] = datetime.datetime.utcnow()

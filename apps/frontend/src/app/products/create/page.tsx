@@ -15,6 +15,8 @@ export default function CreateProductPage() {
   
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
+  const [createdProductId, setCreatedProductId] = useState<number | null>(null)
   
   const [formData, setFormData] = useState({
     product_code: '',
@@ -118,10 +120,27 @@ export default function CreateProductPage() {
       const data: ApiResponse = await response.json()
 
       if (data.success) {
-        // Redirect to products list
-        router.push('/')
+        // Stay on page and show success message
+        setSuccess('Product created successfully!')
+        setCreatedProductId(data.data.product_id)
+        setError(null)
+        // Reset form
+        setFormData({
+          product_code: '',
+          product_name: '',
+          category_name: '',
+          brand_name: '',
+          brand_logo: '',
+          description: '',
+          link: [''],
+          show_in_app: true,
+          new_product: false,
+          discount: '',
+          is_spare_part: false
+        })
       } else {
         setError(data.error || 'Failed to create product')
+        setSuccess(null)
       }
     } catch (err) {
       setError('Failed to create product')
@@ -164,6 +183,30 @@ export default function CreateProductPage() {
           </a>
         </div>
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-green-800">Success</h3>
+              <div className="mt-2 text-sm text-green-700">
+                <p>{success}</p>
+                {createdProductId && (
+                  <p className="mt-1">
+                    <a
+                      href={`/products/${createdProductId}`}
+                      className="text-green-600 hover:text-green-800 underline"
+                    >
+                      View created product
+                    </a>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (

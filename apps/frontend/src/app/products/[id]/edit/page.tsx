@@ -39,6 +39,7 @@ export default function EditProductPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState<string | null>(null)
   
   const [formData, setFormData] = useState({
     product_name: '',
@@ -175,10 +176,14 @@ export default function EditProductPage() {
       const data: ApiResponse = await response.json()
 
       if (data.success) {
-        // Redirect to product detail page
-        router.push(`/products/${productId}`)
+        // Stay on page and show success message
+        setSuccess('Product updated successfully!')
+        setError(null)
+        // Refresh product data
+        fetchProduct()
       } else {
         setError(data.error || 'Failed to update product')
+        setSuccess(null)
       }
     } catch (err) {
       setError('Failed to update product')
@@ -254,6 +259,28 @@ export default function EditProductPage() {
           </a>
         </div>
       </div>
+
+      {/* Success Message */}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-green-800">Success</h3>
+              <div className="mt-2 text-sm text-green-700">
+                <p>{success}</p>
+                <p className="mt-1">
+                  <a
+                    href={`/products/${productId}`}
+                    className="text-green-600 hover:text-green-800 underline"
+                  >
+                    View product details
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error Message */}
       {error && (

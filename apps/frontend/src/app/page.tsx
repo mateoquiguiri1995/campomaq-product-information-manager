@@ -5,10 +5,13 @@ import { useState, useEffect, useCallback } from 'react'
 interface Product {
   _id: string
   product_id: number
+  product_code: string
   product_name: string
   category_name: string
   brand_name: string
   price_cash: number
+  link: string[]
+  show_in_app: boolean
 }
 
 interface ApiResponse {
@@ -23,6 +26,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [showInAppOnly, setShowInAppOnly] = useState(false)
 
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
 
@@ -33,15 +37,23 @@ export default function ProductsPage() {
     }, 300) // 300ms delay
 
     return () => clearTimeout(timeoutId)
-  }, [searchTerm])
+  }, [searchTerm, showInAppOnly])
 
   const fetchProducts = async () => {
     try {
       setLoading(true)
-      const url = searchTerm 
-        ? `${API_BASE_URL}/products?search=${encodeURIComponent(searchTerm)}`
-        : `${API_BASE_URL}/products`
       
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+      if (showInAppOnly) {
+        params.append('show_in_app', 'true')
+      }
+      params.append('limit', '100') // Limit to 100 products
+      
+      const url = `${API_BASE_URL}/products?${params.toString()}`
       const response = await fetch(url)
       const data: ApiResponse = await response.json()
       
@@ -117,18 +129,34 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+        <h1 className="text-2xl font-bold text-black">Products</h1>
       </div>
 
-      {/* Search Bar */}
-      <div className="max-w-md">
-        <input
-          type="text"
-          placeholder="Search products..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="input-field"
-        />
+      {/* Search and Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+        <div className="flex-1 max-w-md">
+          <input
+            type="text"
+            placeholder="Search by name, code, or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-field"
+          />
+        </div>
+        
+        <div className="flex items-center space-x-2">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInAppOnly}
+              onChange={(e) => setShowInAppOnly(e.target.checked)}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="text-sm font-medium text-gray-700">
+              Show active products only
+            </span>
+          </label>
+        </div>
       </div>
 
       {/* Products Table */}
@@ -138,7 +166,13 @@ export default function ProductsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Code
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Product Name
@@ -153,6 +187,9 @@ export default function ProductsPage() {
                   Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Has Images
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -160,18 +197,37 @@ export default function ProductsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                     {searchTerm ? 'No products found matching your search.' : 'No products found.'}
                   </td>
                 </tr>
               ) : (
                 products.map((product) => (
                   <tr key={product._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                      <div className="flex justify-center">
+                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                          product.show_in_app
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                            : 'bg-gray-100 text-gray-600 border border-gray-200'
+                        }`}>
+                          <div className={`w-2 h-2 rounded-full mr-2 ${
+                            product.show_in_app ? 'bg-emerald-500' : 'bg-gray-400'
+                          }`}></div>
+                          {product.show_in_app ? 'Active' : 'Inactive'}
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {product.product_id}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {product.product_name}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {product.product_code ? product.product_code.substring(0, 15) + (product.product_code.length > 15 ? '...' : '') : 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      <div className="truncate" title={product.product_name}>
+                        {product.product_name}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {product.category_name}
@@ -180,7 +236,16 @@ export default function ProductsPage() {
                       {product.brand_name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ${product.price_cash.toFixed(2)}
+                      ${product.price_cash?.toFixed(2) || '0.00'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        product.link && product.link.length > 0 && product.link.some(link => link && link.trim() !== '')
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {product.link && product.link.length > 0 && product.link.some(link => link && link.trim() !== '') ? 'Yes' : 'No'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <a
