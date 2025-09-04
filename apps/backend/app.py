@@ -18,17 +18,34 @@ MONGO_URI = os.getenv('MONGO_URI')
 DB_NAME = os.getenv('DB_NAME', 'products_db')
 COLLECTION_NAME = os.getenv('COLLECTION_NAME', 'catalog')
 
-# Initialize MongoDB client
-try:
-    client = MongoClient(MONGO_URI)
-    db = client[DB_NAME]
-    collection = db[COLLECTION_NAME]
-    # Test connection
-    client.admin.command('ping')
-    print("Connected to MongoDB successfully!")
-except Exception as e:
-    print(f"Error connecting to MongoDB: {e}")
-    client = None
+# Initialize MongoDB client (non-blocking, fast-fail)
+client = None
+db = None
+collection = None
+
+MONGO_TIMEOUT_MS = int(os.getenv('MONGO_TIMEOUT_MS', '1000') or '1000')
+
+if MONGO_URI:
+    try:
+        client = MongoClient(
+            MONGO_URI,
+            serverSelectionTimeoutMS=MONGO_TIMEOUT_MS,
+        )
+        db = client[DB_NAME]
+        collection = db[COLLECTION_NAME]
+        # Try a quick ping, but don't block startup if it fails
+        try:
+            client.admin.command('ping')
+            print("Connected to MongoDB successfully!")
+        except Exception as ping_err:
+            print(f"MongoDB ping failed (continuing without DB): {ping_err}")
+    except Exception as e:
+        print(f"Error creating MongoDB client: {e}")
+        client = None
+        db = None
+        collection = None
+else:
+    print("MONGO_URI not set; starting without database")
 
 def serialize_product(product):
     """Convert MongoDB document to JSON serializable format"""
@@ -68,6 +85,8 @@ def health_check():
 @app.route('/products', methods=['GET'])
 def get_products():
     """Get products with pagination and filtering"""
+    if collection is None:
+        return jsonify({"success": False, "error": "Database unavailable"}), 503
     try:
         # Base query
         query = {}
@@ -141,6 +160,8 @@ def get_products():
 @app.route('/products/<product_id>', methods=['GET'])
 def get_product(product_id):
     """Get a single product by ID (all fields)"""
+    if collection is None:
+        return jsonify({"success": False, "error": "Database unavailable"}), 503
     try:
         # Try to convert to int for product_id search
         try:
@@ -177,6 +198,8 @@ def get_product(product_id):
 @app.route('/products', methods=['POST'])
 def create_product():
     """Create a new product"""
+    if collection is None:
+        return jsonify({"success": False, "error": "Database unavailable"}), 503
     try:
         data = request.get_json()
         
@@ -243,6 +266,8 @@ def create_product():
 @app.route('/products/<product_id>', methods=['PUT'])
 def update_product(product_id):
     """Update an existing product"""
+    if collection is None:
+        return jsonify({"success": False, "error": "Database unavailable"}), 503
     try:
         data = request.get_json()
         
@@ -326,6 +351,8 @@ def update_product(product_id):
 @app.route('/products/<product_id>', methods=['DELETE'])
 def delete_product(product_id):
     """Soft delete a product (set show_in_app=false)"""
+    if collection is None:
+        return jsonify({"success": False, "error": "Database unavailable"}), 503
     try:
         # Try to find product by product_id first
         try:
