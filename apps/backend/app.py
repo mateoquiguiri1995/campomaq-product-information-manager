@@ -23,7 +23,7 @@ client = None
 db = None
 collection = None
 
-MONGO_TIMEOUT_MS = int(os.getenv('MONGO_TIMEOUT_MS', '1000') or '1000')
+MONGO_TIMEOUT_MS = int(os.getenv('MONGO_TIMEOUT_MS') or '2000')
 
 if MONGO_URI:
     try:
@@ -81,6 +81,12 @@ def get_next_product_id():
 def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "timestamp": datetime.datetime.utcnow().isoformat()})
+
+# Root endpoint so Azure warmup (HTTP GET /) returns 200 quickly
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint for platform warmup/health"""
+    return jsonify({"status": "ok"}), 200
 
 @app.route('/products', methods=['GET'])
 def get_products():

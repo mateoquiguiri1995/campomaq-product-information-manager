@@ -78,4 +78,6 @@ jobs:
         with:
           app-name: 'api-campomaq-product-manager'
           slot-name: 'Production'
+          package: release.zip
+          startup-command: "gunicorn --bind=0.0.0.0:${PORT} --timeout 200 app:app"
           
