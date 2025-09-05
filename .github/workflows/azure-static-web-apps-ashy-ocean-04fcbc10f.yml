@@ -10,6 +10,7 @@ on:
       - main
 
 jobs:
+
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
@@ -30,7 +31,21 @@ jobs:
             echo "ERROR: AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_OCEAN_04FCBC10F secret is missing or empty."
             exit 1
           fi
-
+      - name: Show build artifact info
+        run: |
+          echo "workspace: $(pwd)"
+          du -sh apps/frontend/.next || true
+          find apps/frontend/.next -type f | wc -l || true
+          echo "Top 20 largest files:"
+          find apps/frontend/.next -type f -printf "%s\t%p\n" | sort -nr | head -n 20 || true
+    
+      - name: Check for api or functions artifacts
+        run: |
+          echo "api folder listing (if exists):"
+          ls -la apps/frontend/api || true
+          echo ".next/standalone listing (if exists):"
+          ls -la apps/frontend/.next/standalone || true
+        
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
