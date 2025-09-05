@@ -3,7 +3,7 @@ const nextConfig = {
     output: 'standalone',
     // Ensure correct workspace root is used in a monorepo during output file tracing
     // to avoid Next.js inferring the repository root lockfile.
-    // outputFileTracingRoot: path.join(__dirname, '../..'),
+    outputFileTracingRoot: path.join(__dirname, '../..'),
     reactStrictMode: true,
     trailingSlash: true,
     images: {
