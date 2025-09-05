@@ -1,3 +1,5 @@
+const path = require('path'); // <-- you need this
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     output: 'standalone',
