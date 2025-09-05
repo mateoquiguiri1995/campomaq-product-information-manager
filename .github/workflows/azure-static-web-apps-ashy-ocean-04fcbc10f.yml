@@ -10,7 +10,6 @@ on:
       - main
 
 jobs:
-
   build_and_deploy_job:
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-latest
@@ -24,47 +23,53 @@ jobs:
           submodules: true
           lfs: false
 
-      # Optional: verify the deployment token secret exists (will fail early if missing)
-      - name: Check Static Web Apps secret
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install frontend deps
+        working-directory: apps/frontend
         run: |
-          if [ -z "${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_OCEAN_04FCBC10F }}" ]; then
-            echo "ERROR: AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_OCEAN_04FCBC10F secret is missing or empty."
-            exit 1
-          fi
-      - name: Show build artifact info
+          npm ci
+
+      - name: Build frontend
+        working-directory: apps/frontend
+        run: |
+          npm run build
+
+      - name: Show build artifact info (CI)
         run: |
           echo "workspace: $(pwd)"
+          echo "cwd: $(basename $(pwd))/apps/frontend"
+          echo "Size of .next directory:"
           du -sh apps/frontend/.next || true
+          echo "File count in .next:"
           find apps/frontend/.next -type f | wc -l || true
-          echo "Top 20 largest files:"
-          find apps/frontend/.next -type f -printf "%s\t%p\n" | sort -nr | head -n 20 || true
-    
-      - name: Check for api or functions artifacts
+          echo "Top 30 largest files:"
+          find apps/frontend/.next -type f -printf "%s\t%p\n" | sort -nr | head -n 30 || true
+          echo ".next tree (first 200 lines):"
+          find apps/frontend/.next -maxdepth 3 -printf "%p\n" | sed -n '1,200p' || true
+
+      - name: Check for api or functions artifacts (CI)
         run: |
-          echo "api folder listing (if exists):"
+          echo "apps/frontend/api listing (if exists):"
           ls -la apps/frontend/api || true
           echo ".next/standalone listing (if exists):"
           ls -la apps/frontend/.next/standalone || true
-        
-      - name: Build And Deploy
+          echo ".next/server listing (if exists):"
+          ls -la apps/frontend/.next/server || true
+
+      - name: Build And Deploy (upload local artifact)
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_OCEAN_04FCBC10F }}
           action: "upload"
-          app_location: "apps/frontend"
-          api_location: ""          # keep empty if you have no Azure Functions in repo
-          output_location: ".next"  # adjust if you prefer .next/standalone
+          app_location: "apps/frontend"       # still the app folder
+          output_location: ".next"            # artifact produced by your local build
+          skip_app_build: true                # IMPORTANT: tell the action not to run its internal build
+          api_location: ""                    # keep empty if no Azure Functions
 
-  close_pull_request_job:
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    runs-on: ubuntu-latest
-    name: Close Pull Request Job
-    steps:
-      - name: Close Pull Request
-        id: closepullrequest
-        uses: Azure/static-web-apps-deploy@v1
-        with:
-          action: "close"
-          app_location: "apps/frontend"
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ASHY_OCEAN_04FCBC10F }}
+
+
