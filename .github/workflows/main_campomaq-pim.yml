@@ -19,7 +19,7 @@ jobs:
       - name: Use Node.js 18
         uses: actions/setup-node@v4
         with:
-          node-version: '22.15.0'
+          node-version: '22.x'
 
       - name: Install and build dependencies (frontend)
         working-directory: apps/frontend
@@ -30,7 +30,7 @@ jobs:
       - name: Zip build output
         working-directory: apps/frontend
         run: |
-          zip -r frontend.zip .next node_modules package.json
+          zip -r frontend.zip .next node_modules package.json package-lock.json
 
       - name: Login to Azure (Service Principal)
         uses: azure/login@v2
