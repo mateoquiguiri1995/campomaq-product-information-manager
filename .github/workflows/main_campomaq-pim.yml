@@ -20,13 +20,11 @@ jobs:
         with:
           node-version: '22.15.0'
 
-      - name: Install dependencies (frontend)
+      - name: Install and build dependencies (frontend)
         working-directory: apps/frontend
-        run: npm ci
-
-      - name: Build Next.js (normal SSR)
-        working-directory: apps/frontend
-        run: npm run build
+        run: |
+          npm install
+          npm run build
 
       - name: Prepare deploy package (normal SSR)
         run: |
