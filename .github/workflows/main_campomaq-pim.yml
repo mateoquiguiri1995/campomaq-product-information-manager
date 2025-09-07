@@ -31,6 +31,7 @@ jobs:
         run: |
           mkdir -p deploy
           cp -r apps/frontend/.next/standalone/* deploy/
+          mkdir -p deploy/.next
           cp -r apps/frontend/.next/static deploy/.next/static
 
       - name: Login to Azure (Service Principal)
