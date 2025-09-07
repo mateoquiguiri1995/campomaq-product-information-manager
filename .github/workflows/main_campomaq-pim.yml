@@ -38,7 +38,6 @@ jobs:
           cp -r apps/frontend/.next deploy/.next
 
           # Copy public and next config and package.json
-          cp -r apps/frontend/public deploy/public || true
           cp apps/frontend/package.json deploy/package.json
           cp apps/frontend/next.config.js deploy/next.config.js || true
 
