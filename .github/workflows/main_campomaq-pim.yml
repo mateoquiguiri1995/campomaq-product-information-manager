@@ -40,7 +40,7 @@ jobs:
           cp apps/frontend/next.config.js deploy/next.config.js || true
 
           # Install production dependencies inside deploy folder
-          (cd deploy && npm ci --omit=dev)
+          (cd deploy && npm install --omit=dev)
 
           echo "Deploy package size:"
           du -sh deploy || true
