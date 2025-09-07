@@ -29,6 +29,36 @@ jobs:
           npm install
           npm run build
 
+      - name: Prepare standalone deploy package
+        run: |
+          rm -rf deploy
+          mkdir -p deploy
+      
+          # copy the full .next folder (includes server, BUILD_ID, trace, etc.)
+          cp -r apps/frontend/.next deploy/.next
+      
+          # ensure standalone runtime is available under .next/standalone
+          # (some builds put standalone inside .next/standalone or inside .next/standalone/apps/frontend)
+          if [ -d "apps/frontend/.next/standalone" ]; then
+            cp -r apps/frontend/.next/standalone deploy/.next/standalone
+          fi
+      
+          # fallback: also copy the generated standalone folder if produced at .next/standalone/* path
+          if [ -d "apps/frontend/.next/standalone/apps/frontend" ]; then
+            cp -r apps/frontend/.next/standalone/apps/frontend deploy/.next/standalone/apps/frontend
+          fi
+      
+          # Copy public and package.json
+          cp -r apps/frontend/public deploy/public || true
+          cp apps/frontend/package.json deploy/package.json
+      
+          # show what we packaged
+          echo "deploy package size:"
+          du -sh deploy || true
+          echo "deploy top tree:"
+          find deploy -maxdepth 3 -printf "%p\n" | sed -n '1,200p' || true
+        
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
