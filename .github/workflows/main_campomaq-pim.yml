@@ -27,6 +27,12 @@ jobs:
           npm install
           npm run build      
 
+      - name: Prepare standalone deployment
+        run: |
+          mkdir -p deploy
+          cp -r apps/frontend/.next/standalone/* deploy/
+          cp -r apps/frontend/.next/static deploy/.next/static
+
       - name: Login to Azure (Service Principal)
         uses: azure/login@v2
         with:
@@ -39,4 +45,4 @@ jobs:
         with:
           app-name: 'campomaq-pim'      # e.g. campomaq-pim
           slot-name: 'Production'
-          package: 'apps/frontend/'
+          package: deploy
