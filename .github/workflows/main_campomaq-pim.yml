@@ -1,100 +1,65 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy Node.js app to Azure Web App - campomaq-pim
+name: Build and deploy Next.js (normal SSR) to Azure Web App
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js version
-        uses: actions/setup-node@v3
+      - name: Use Node.js 18
+        uses: actions/setup-node@v4
         with:
           node-version: '22.15.0'
 
-      - name: Install dependencies & build (Next.js standalone)
+      - name: Install dependencies (frontend)
         working-directory: apps/frontend
-        run: |
-          npm install
-          npm run build
+        run: npm ci
 
-      - name: Prepare standalone deploy package
+      - name: Build Next.js (normal SSR)
+        working-directory: apps/frontend
+        run: npm run build
+
+      - name: Prepare deploy package (normal SSR)
         run: |
+          set -e
           rm -rf deploy
           mkdir -p deploy
-      
-          # copy the full .next folder (includes server, BUILD_ID, trace, etc.)
+
+          # Copy the full .next folder (server files, BUILD_ID, etc.)
           cp -r apps/frontend/.next deploy/.next
-      
-          # ensure standalone runtime is available under .next/standalone
-          # (some builds put standalone inside .next/standalone or inside .next/standalone/apps/frontend)
-          if [ -d "apps/frontend/.next/standalone" ]; then
-            cp -r apps/frontend/.next/standalone deploy/.next/standalone
-          fi
-      
-          # fallback: also copy the generated standalone folder if produced at .next/standalone/* path
-          if [ -d "apps/frontend/.next/standalone/apps/frontend" ]; then
-            cp -r apps/frontend/.next/standalone/apps/frontend deploy/.next/standalone/apps/frontend
-          fi
-      
-          # Copy public and package.json
+
+          # Copy public and next config and package.json
           cp -r apps/frontend/public deploy/public || true
           cp apps/frontend/package.json deploy/package.json
-      
-          # show what we packaged
-          echo "deploy package size:"
+          cp apps/frontend/next.config.js deploy/next.config.js || true
+
+          # Install production dependencies inside deploy folder
+          (cd deploy && npm ci --omit=dev)
+
+          echo "Deploy package size:"
           du -sh deploy || true
-          echo "deploy top tree:"
-          find deploy -maxdepth 3 -printf "%p\n" | sed -n '1,200p' || true
-        
+          echo "Deploy top-level:"
+          ls -la deploy | sed -n '1,200p' || true
 
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-app
-          path: |
-            apps/frontend/.next/standalone
-            apps/frontend/.next/static
-            apps/frontend/public
-            apps/frontend/package.json
-            apps/frontend/node_modules
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: node-app
-      
-      - name: Login to Azure
+      - name: Login to Azure (Service Principal)
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_8DC825D65050499A8CE13D2F7E7BA4E8 }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E6879F36F9D04481B37DA7154FA19B77 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_4FAA18EB0E1947A6A972154E759188FE }}
 
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'campomaq-pim'
+          app-name: '<campomaq-pim>'      # e.g. campomaq-pim
           slot-name: 'Production'
-          package: .
-          
+          package: deploy
