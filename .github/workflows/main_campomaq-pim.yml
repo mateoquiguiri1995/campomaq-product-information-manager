@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Use Node.js 18
+      - name: Use Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
@@ -25,12 +25,7 @@ jobs:
         working-directory: apps/frontend
         run: |
           npm install
-          npm run build
-      
-      - name: Zip build output
-        working-directory: apps/frontend
-        run: |
-          zip -r frontend.zip .next node_modules package.json package-lock.json
+          npm run build      
 
       - name: Login to Azure (Service Principal)
         uses: azure/login@v2
@@ -44,4 +39,4 @@ jobs:
         with:
           app-name: 'campomaq-pim'      # e.g. campomaq-pim
           slot-name: 'Production'
-          package: apps/frontend/frontend.zip
+          package: .
