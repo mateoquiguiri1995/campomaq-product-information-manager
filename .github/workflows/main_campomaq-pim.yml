@@ -26,6 +26,11 @@ jobs:
         run: |
           npm install
           npm run build
+      
+      - name: Zip build output
+        working-directory: apps/frontend
+        run: |
+          zip -r frontend.zip .next node_modules package.json
 
       - name: Login to Azure (Service Principal)
         uses: azure/login@v2
@@ -39,4 +44,4 @@ jobs:
         with:
           app-name: 'campomaq-pim'      # e.g. campomaq-pim
           slot-name: 'Production'
-          package: apps/frontend
+          package: apps/frontend/frontend.zip
