@@ -27,27 +27,6 @@ jobs:
           npm install
           npm run build
 
-      - name: Prepare deploy package (normal SSR)
-        run: |
-          set -e
-          rm -rf deploy
-          mkdir -p deploy
-
-          # Copy the full .next folder (server files, BUILD_ID, etc.)
-          cp -r apps/frontend/.next deploy/.next
-
-          # Copy public and next config and package.json
-          cp apps/frontend/package.json deploy/package.json
-          cp apps/frontend/next.config.js deploy/next.config.js || true
-
-          # Install production dependencies inside deploy folder
-          (cd deploy && npm install --omit=dev)
-
-          echo "Deploy package size:"
-          du -sh deploy || true
-          echo "Deploy top-level:"
-          ls -la deploy | sed -n '1,200p' || true
-
       - name: Login to Azure (Service Principal)
         uses: azure/login@v2
         with:
@@ -60,4 +39,4 @@ jobs:
         with:
           app-name: 'campomaq-pim'      # e.g. campomaq-pim
           slot-name: 'Production'
-          package: deploy
+          package: apps/frontend
