@@ -65,7 +65,7 @@ export default function EditProductPage() {
 
   const brands = [
     'ANNOVI REBERBERI', 'CASAMOTO', 'DUCATI', 'ECHO', 'HUSQVARNA',
-    'MARUYAMA', 'STHIL', 'WHALE BEST', 'TEMCO (PIM only)', 'OTROS (PIM only)'
+    'MARUYAMA', 'MITSUBISHI', 'OLEOMAC', 'SHINDAIWA', 'STHIL', 'WHALE BEST', 'TEMCO', 'OTROS'
   ]
 
   const brandLogos = [
