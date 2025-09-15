@@ -71,7 +71,8 @@ export default function EditProductPage() {
   const brandLogos = [
     '/images/brands/annovi-reberberi.png', '/images/brands/casamoto.png',
     '/images/brands/ducati.png', '/images/brands/echo.png', '/images/brands/husqvarna.png',
-    '/images/brands/maruyama.png', '/images/brands/sthil.png', '/images/brands/whale-best.png',
+    '/images/brands/maruyama.png', '/images/brands/mitsubishi.png', '/images/brands/oleo-mac.png',
+    '/images/brands/sthil.png', '/images/brands/shindaiwa.png', '/images/brands/whale-best.png',
     '/images/brands/temco.png', '/images/brands/placeholder.png'
   ]
 
